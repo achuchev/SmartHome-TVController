@@ -391,7 +391,8 @@ void setup()
                           PIN_TEMP,
                           TEMP_SENSOR_TYPE,
                           mqttClient,
-                          MQTT_TOPIC_TEMPERATURE_GET);
+                          MQTT_TOPIC_TEMPERATURE_GET,
+                          TEMP_SENSOR_CORRECTION);
   fotaClient->init();
 
   resetLastPassedKeysArray();
