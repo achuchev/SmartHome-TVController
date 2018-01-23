@@ -254,9 +254,6 @@ void tvIRSend(String payload) {
     return;
   }
 
-  // root.prettyPrintTo(Serial);
-  // PRINTLN("");
-
   const char *powerOnChar = status.get<const char *>("powerOn");
 
   if (powerOnChar) {
