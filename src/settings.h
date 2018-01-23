@@ -8,10 +8,11 @@
 #define MQTT_TOPIC_GET "get/apartment/livingRoom/tv"
 #define MQTT_TOPIC_SET "set/apartment/livingRoom/tv"
 
-#define PIN_IR_RECEVIER D1 // IR Receiver PIN
-#define PIN_IR_SENDER D2   // IR LED PIN
-#define PIN_TEMP D3        // DHT 22 PIN
+#define PIN_IR_RECEVIER D1        // IR Receiver PIN
+#define PIN_IR_SENDER D2          // IR LED PIN
+#define PIN_TEMP D3               // DHT 22 PIN
 #define TEMP_SENSOR_TYPE DHT22
+#define TEMP_SENSOR_CORRECTION -1 // The correction in degrees
 #define MQTT_TOPIC_TEMPERATURE_GET "get/temperature/apartment/livingRoom/tv"
 
 #define TIME_BETWEEN_TRANSMITTION 500
