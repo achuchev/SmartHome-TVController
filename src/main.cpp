@@ -4,7 +4,6 @@
 #include <IRsend.h>
 #include <IRrecv.h>
 #include <IRutils.h>
-#include <CommonConfig.h>
 #include <MqttClient.h>
 #include <FotaClient.h>
 #include <ESPWifiClient.h>
