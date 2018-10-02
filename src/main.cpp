@@ -484,8 +484,6 @@ void sendTVScreenOff() {
   sendIRCode(codeSamsungSimpleRCKeyUp,    false, 1000);
   sendIRCode(codeSamsungSimpleRCOk,       false,
              TIME_BETWEEN_TRANSMITTION);
-  sendIRCode(codeSamsungSimpleRCReturn,   false,
-             TIME_BETWEEN_TRANSMITTION);
 }
 
 bool isKeyCombination(unsigned long code) {
@@ -611,7 +609,7 @@ bool isKeyCombination(unsigned long code) {
 
 void tvGuessChannelNumber(uint8 digit) {
   // The idea is to guess the channel number by the pressed buttons
-  if (millis() <= lastPressedKey + 1000) {
+  if (millis() <= lastPressedKey + (unsigned)1000) {
     tv->channelNumber = tv->channelNumber * 10 + digit;
   } else {
     tv->channelNumber = digit;
