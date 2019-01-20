@@ -80,9 +80,12 @@ const unsigned long code1PlusKey9        = 0x10EF10EF;
 const unsigned long code1PlusKeyPreCh    = 0x10EFE817;
 
 //////////// Codes Samsung from Simple Remote Control
+const unsigned long codeSamsungSimpleRCKeyMenu   = 0xE0E058A7;
 const unsigned long codeSamsungSimpleRCKeyTools  = 0xE0E0D22D;
 const unsigned long codeSamsungSimpleRCKeyUp     = 0xE0E006F9;
 const unsigned long codeSamsungSimpleRCKeyDown   = 0xE0E08679;
+const unsigned long codeSamsungSimpleRCKeyRight  = 0xE0E046B9;
+const unsigned long codeSamsungSimpleRCKeyLeft   = 0xE0E0A659;
 const unsigned long codeSamsungSimpleRCOk        = 0xE0E016E9;
 const unsigned long codeSamsungSimpleRCReturn    = 0xE0E01AE5;
 const unsigned long codeSamsungSimpleRCMute      = 0xE0E0F00F;
@@ -103,8 +106,11 @@ unsigned long lastPressedKeys[KEY_COMBINATION_COUNT];
 unsigned long keyCombinationTVSleepTimer60[KEY_COMBINATION_COUNT] =
 { code1PlusNavLeft, code1PlusNavRight, code1PlusNavLeft, code1PlusNavRight };
 
-unsigned long keyCombinationTVSleepTimer30[KEY_COMBINATION_COUNT] =
-{ code1PlusNavLeft, code1PlusNavRight, code1PlusNavLeft, code1PlusNavLeft };
+unsigned long keyCombinationTVBrightnessLow[KEY_COMBINATION_COUNT] =
+{ code1PlusNavLeft, code1PlusNavLeft, code1PlusNavLeft, code1PlusNavRight };
+
+unsigned long keyCombinationTVBrightnessHigh[KEY_COMBINATION_COUNT] =
+{ code1PlusNavLeft, code1PlusNavLeft, code1PlusNavRight, code1PlusNavLeft };
 
 unsigned long keyCombinationTVScreenOff[KEY_COMBINATION_COUNT] =
 { code1PlusNavLeft, code1PlusNavLeft, code1PlusNavRight, code1PlusNavRight };

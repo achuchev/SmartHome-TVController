@@ -39,27 +39,30 @@ void sendIRCode(unsigned long code,
                 bool          useNEC              = true,
                 int           delayBeforeTransmit = 0,
                 int           repeat              = 1) {
-  PRINT("Sleep: ");
-  PRINT(delayBeforeTransmit, DEC);
-  PRINT(" Send IR Code: ");
-  PRINT(code,                HEX);
-  PRINT(" codeLen:");
-  PRINT(codeLen,             DEC);
-  PRINT(" Type: ");
+  PRINT("TV: Send IR Code: ");
+  PRINTLN(code, HEX);
+  PRINT_D("    delayBeforeTransmit: ");
+  PRINTLN_D(delayBeforeTransmit, DEC);
+  PRINT_D("    codeLen:");
+  PRINTLN_D(codeLen, DEC);
+  PRINT_D("    Type: ");
+
   delay(delayBeforeTransmit);
 
-  for (int i = 0; i < repeat; i++) {
+  for (uint8_t i = 0; i < repeat; i++) {
     if (useNEC == true) {
       irsend.sendNEC(code, codeLen);
-      PRINTLN("NEC");
+      PRINTLN_D("NEC");
     } else {
       irsend.sendSAMSUNG(code, codeLen);
-      PRINTLN("Samsung");
+      PRINTLN_D("Samsung");
     }
     lastTransmissionTime = millis();
 
-    // Wait a bit between retransmissions
-    delay(50);
+    if (i + 1 < repeat) {
+      // Wait a bit between retransmissions
+      delay(50);
+    }
   }
 }
 
@@ -427,8 +430,8 @@ void storeCode(decode_results *results) {
 
   // FIXME: For some reason the code below is needed, otherwise the program will
   // not work:(
-  PRINT("Received: ");
-  PRINTLN(codeValueReceived, HEX);
+  PRINT_D("TV: Received: ");
+  PRINTLN_D(codeValueReceived, HEX);
 }
 
 bool compareArrays(unsigned long actualArray[],
@@ -455,11 +458,55 @@ bool compareArrays(unsigned long actualArray[],
   return true;
 }
 
+void sendTVBrightness(bool highSettings = true) {
+  PRINTLN("TV: Sending sendTVBrightness Combination");
+  sendIRCode(codeSamsungSimpleRCKeyMenu,  false,
+             TIME_BETWEEN_TRANSMITTION);
+  sendIRCode(codeSamsungSimpleRCKeyRight, false, 1500);
+  sendIRCode(codeSamsungSimpleRCKeyDown,  false, 500);
+  sendIRCode(codeSamsungSimpleRCKeyRight, false, 500);
+
+  uint8 delayBetweenButtons = 50;
+  uint8 blacklight          = 1;
+  uint8 contrast            = 10;
+
+  if (highSettings) {
+    blacklight = 14;
+    contrast   = 45;
+  }
+
+  // Blacklight
+  for (uint8_t i = 0; i < 25; i++) {
+    sendIRCode(codeSamsungSimpleRCKeyLeft, false, delayBetweenButtons);
+  }
+
+  for (uint8_t i = 0; i < blacklight; i++) {
+    sendIRCode(codeSamsungSimpleRCKeyRight, false, delayBetweenButtons);
+  }
+
+  // Contrast
+  sendIRCode(codeSamsungSimpleRCKeyDown, false, 1500);
+
+  for (uint8_t i = 0; i < 50; i++) {
+    sendIRCode(codeSamsungSimpleRCKeyLeft, false, delayBetweenButtons);
+  }
+
+  for (uint8_t i = 0; i < contrast; i++) {
+    sendIRCode(codeSamsungSimpleRCKeyRight, false, delayBetweenButtons);
+  }
+
+  // Exit
+  for (uint8_t i = 0; i < 2; i++) {
+    // sendIRCode(codeSamsungSimpleRCReturn, false, 1500);
+    sendIRCode(codeSamsungSimpleRCMute, false, 500);
+  }
+}
+
 void sendTVSleepTimer(bool is60min) {
-  PRINTLN("Sending sendTVScreenOff Combination");
+  PRINTLN("TV: Sending sendTVScreenOff Combination");
   sendIRCode(codeSamsungSimpleRCKeyTools, false,
              TIME_BETWEEN_TRANSMITTION);
-  sendIRCode(codeSamsungSimpleRCKeyDown,  false, 1000);
+  sendIRCode(codeSamsungSimpleRCKeyDown,  false, 1500);
   sendIRCode(codeSamsungSimpleRCKeyDown,  false,
              TIME_BETWEEN_TRANSMITTION);
   sendIRCode(codeSamsungSimpleRCKeyDown,  false,
@@ -478,10 +525,10 @@ void sendTVSleepTimer(bool is60min) {
 }
 
 void sendTVScreenOff() {
-  PRINTLN("Sending sendTVSleepTimer Combination");
+  PRINTLN("TV: Sending sendTVSleepTimer Combination");
   sendIRCode(codeSamsungSimpleRCKeyTools, false,
              TIME_BETWEEN_TRANSMITTION);
-  sendIRCode(codeSamsungSimpleRCKeyUp,    false, 1000);
+  sendIRCode(codeSamsungSimpleRCKeyUp,    false, 1500);
   sendIRCode(codeSamsungSimpleRCOk,       false,
              TIME_BETWEEN_TRANSMITTION);
 }
@@ -495,13 +542,13 @@ bool isKeyCombination(unsigned long code) {
 
   timeSinceLastSequanceKeyPressed = millis()  - timeOfTheLastPressedKeySequance;
 
-  PRINT("Milis since last key pressed: ");
-  PRINTLN(timeSinceLastSequanceKeyPressed);
+  PRINT_D("TV: Milis since last key pressed: ");
+  PRINTLN_D(timeSinceLastSequanceKeyPressed);
 
   if (timeSinceLastSequanceKeyPressed >= 5000) {
     // Too much time since last sequance key was pressed
-    PRINTLN(
-      "Too much time since last sequance key was pressed. Resetting the sequance.");
+    PRINTLN_D(
+      "TV: Too much time since last sequance key was pressed. Resetting the sequance.");
     timeOfTheLastPressedKeySequance = 0;
     resetLastPassedKeysArray();
   }
@@ -516,14 +563,14 @@ bool isKeyCombination(unsigned long code) {
   } else {
     lastPressedKeysIndex++;
   }
-  PRINTLN("lastPressedKeys Start");
+  PRINTLN_D("TV: lastPressedKeys Start");
 
   // FIXME: For some reason the code below is needed, otherwise the program will
   // not work:(
   for (int i = 0; i < KEY_COMBINATION_COUNT; i++) {
     Serial.println(lastPressedKeys[i], HEX);
   }
-  PRINTLN("lastPressedKeys End");
+  PRINTLN_D("TV: lastPressedKeys End");
 
   bool isCombination = false;
   bool isAnySequance = false;
@@ -542,13 +589,27 @@ bool isKeyCombination(unsigned long code) {
     isAnySequance = true;
   }
 
-  // TV sleep timer 30 min
+  // TV Brightness Low
   isSequance = true;
 
   if (!isCombination &&
-      compareArrays(lastPressedKeys, keyCombinationTVSleepTimer30,
+      compareArrays(lastPressedKeys, keyCombinationTVBrightnessLow,
                     KEY_COMBINATION_COUNT, isSequance)) {
-    sendTVSleepTimer(false);
+    sendTVBrightness(false);
+    isCombination = true;
+  }
+
+  if (isSequance || isAnySequance) {
+    isAnySequance = true;
+  }
+
+  // TV Brightness High
+  isSequance = true;
+
+  if (!isCombination &&
+      compareArrays(lastPressedKeys, keyCombinationTVBrightnessHigh,
+                    KEY_COMBINATION_COUNT, isSequance)) {
+    sendTVBrightness(true);
     isCombination = true;
   }
 
@@ -593,17 +654,17 @@ bool isKeyCombination(unsigned long code) {
   }
   return false;
 
-  PRINT("isCombination: ");
-  PRINTLN(isCombination);
-  PRINT("isAnySequance: ");
-  PRINTLN(isAnySequance);
+  PRINT_D("TV: isCombination: ");
+  PRINTLN_D(isCombination);
+  PRINT_D("TV: isAnySequance: ");
+  PRINTLN_D(isAnySequance);
 
-  PRINTLN("lastPressedKeys Start");
+  PRINTLN_D("TV: lastPressedKeys Start");
 
   for (int i = 0; i < KEY_COMBINATION_COUNT; i++) {
-    PRINTLN(lastPressedKeys[i], HEX);
+    PRINTLN_D(lastPressedKeys[i], HEX);
   }
-  PRINTLN("lastPressedKeys End");
+  PRINTLN_D("TV: lastPressedKeys End");
   return false;
 }
 
@@ -622,178 +683,177 @@ void irLoop() {
     irrecv.disableIRIn();
     storeCode(&results);
 
-    if (!isKeyCombination(codeValueReceived)) {
-      switch (codeValueReceived) {
-        case code1PlusNavUp:
-        {
-          sendIRCode(codeNecNavUp);
-          tv->channelNumber++;
-          break;
-        }
-        case code1PlusNavDown:
-        {
-          sendIRCode(codeNecNavDown);
-          tv->channelNumber--;
-          break;
-        }
-        case code1PlusNavLeft:
-        {
-          sendIRCode(codeNecNavLeft);
-          break;
-        }
-        case code1PlusNavRight:
-        {
-          sendIRCode(codeNecNavRight);
-          break;
-        }
-        case code1PlusNavEnter:
-        {
-          sendIRCode(codeNecOk);
-          break;
-        }
-        case code1PlusPower:
-        {
-          sendSTBPowerOnOff();
+    switch (codeValueReceived) {
+      case code1PlusNavUp:
+      {
+        sendIRCode(codeNecNavUp);
+        tv->channelNumber++;
+        break;
+      }
+      case code1PlusNavDown:
+      {
+        sendIRCode(codeNecNavDown);
+        tv->channelNumber--;
+        break;
+      }
+      case code1PlusNavLeft:
+      {
+        sendIRCode(codeNecNavLeft);
+        break;
+      }
+      case code1PlusNavRight:
+      {
+        sendIRCode(codeNecNavRight);
+        break;
+      }
+      case code1PlusNavEnter:
+      {
+        sendIRCode(codeNecOk);
+        break;
+      }
+      case code1PlusPower:
+      {
+        sendSTBPowerOnOff();
 
-          // FIXME: replace with get real status
-          // tv->powerOn = not (tv->powerOn);
-          break;
-        }
-        case code1PlusChannelList:
-        {
-          sendIRCode(codeNecBack);
-          break;
-        }
-        case code1PlusKey0:
-        {
-          sendIRCode(codeNecKey0);
-          tvGuessChannelNumber(0);
-          break;
-        }
-        case code1PlusKey1:
-        {
-          sendIRCode(codeNecKey1);
-          tvGuessChannelNumber(1);
-          break;
-        }
-        case code1PlusKey2:
-        {
-          sendIRCode(codeNecKey2);
-          tvGuessChannelNumber(2);
-          break;
-        }
-        case code1PlusKey3:
-        {
-          sendIRCode(codeNecKey3);
-          tvGuessChannelNumber(3);
-          break;
-        }
-        case code1PlusKey4:
-        {
-          sendIRCode(codeNecKey4);
-          tvGuessChannelNumber(4);
-          break;
-        }
-        case code1PlusKey5:
-        {
-          sendIRCode(codeNecKey5);
-          tvGuessChannelNumber(5);
-          break;
-        }
-        case code1PlusKey6:
-        {
-          sendIRCode(codeNecKey6);
-          tvGuessChannelNumber(6);
-          break;
-        }
-        case code1PlusKey7:
-        {
-          sendIRCode(codeNecKey7);
-          tvGuessChannelNumber(7);
-          break;
-        }
-        case code1PlusKey8:
-        {
-          sendIRCode(codeNecKey8);
-          tvGuessChannelNumber(8);
-          break;
-        }
-        case code1PlusKey9:
-        {
-          sendIRCode(codeNecKey9);
-          tvGuessChannelNumber(9);
-          break;
-        }
-        case codeNecChannelUp:
-        {
-          tv->channelNumber++;
-          break;
-        }
-        case codeNecChannelDown:
-        {
-          tv->channelNumber--;
-          break;
-        }
-        case codeSamsungSimpleVolumeUp:
-        {
-          break;
-        }
-        case codeSamsungSimpleVolumeDown:
-        {
-          break;
-        }
-        case codeNecKey0:
-        {
-          tvGuessChannelNumber(0);
-          break;
-        }
-        case codeNecKey1:
-        {
-          tvGuessChannelNumber(1);
-          break;
-        }
-        case codeNecKey2:
-        {
-          tvGuessChannelNumber(2);
-          break;
-        }
-        case codeNecKey3:
-        {
-          tvGuessChannelNumber(3);
-          break;
-        }
-        case codeNecKey4:
-        {
-          tvGuessChannelNumber(4);
-          break;
-        }
-        case codeNecKey5:
-        {
-          tvGuessChannelNumber(5);
-          break;
-        }
-        case codeNecKey6:
-        {
-          tvGuessChannelNumber(6);
-          break;
-        }
-        case codeNecKey7:
-        {
-          tvGuessChannelNumber(7);
-          break;
-        }
-        case codeNecKey8:
-        {
-          tvGuessChannelNumber(8);
-          break;
-        }
-        case codeNecKey9:
-        {
-          tvGuessChannelNumber(9);
-          break;
-        }
+        // FIXME: replace with get real status
+        // tv->powerOn = not (tv->powerOn);
+        break;
+      }
+      case code1PlusChannelList:
+      {
+        sendIRCode(codeNecBack);
+        break;
+      }
+      case code1PlusKey0:
+      {
+        sendIRCode(codeNecKey0);
+        tvGuessChannelNumber(0);
+        break;
+      }
+      case code1PlusKey1:
+      {
+        sendIRCode(codeNecKey1);
+        tvGuessChannelNumber(1);
+        break;
+      }
+      case code1PlusKey2:
+      {
+        sendIRCode(codeNecKey2);
+        tvGuessChannelNumber(2);
+        break;
+      }
+      case code1PlusKey3:
+      {
+        sendIRCode(codeNecKey3);
+        tvGuessChannelNumber(3);
+        break;
+      }
+      case code1PlusKey4:
+      {
+        sendIRCode(codeNecKey4);
+        tvGuessChannelNumber(4);
+        break;
+      }
+      case code1PlusKey5:
+      {
+        sendIRCode(codeNecKey5);
+        tvGuessChannelNumber(5);
+        break;
+      }
+      case code1PlusKey6:
+      {
+        sendIRCode(codeNecKey6);
+        tvGuessChannelNumber(6);
+        break;
+      }
+      case code1PlusKey7:
+      {
+        sendIRCode(codeNecKey7);
+        tvGuessChannelNumber(7);
+        break;
+      }
+      case code1PlusKey8:
+      {
+        sendIRCode(codeNecKey8);
+        tvGuessChannelNumber(8);
+        break;
+      }
+      case code1PlusKey9:
+      {
+        sendIRCode(codeNecKey9);
+        tvGuessChannelNumber(9);
+        break;
+      }
+      case codeNecChannelUp:
+      {
+        tv->channelNumber++;
+        break;
+      }
+      case codeNecChannelDown:
+      {
+        tv->channelNumber--;
+        break;
+      }
+      case codeSamsungSimpleVolumeUp:
+      {
+        break;
+      }
+      case codeSamsungSimpleVolumeDown:
+      {
+        break;
+      }
+      case codeNecKey0:
+      {
+        tvGuessChannelNumber(0);
+        break;
+      }
+      case codeNecKey1:
+      {
+        tvGuessChannelNumber(1);
+        break;
+      }
+      case codeNecKey2:
+      {
+        tvGuessChannelNumber(2);
+        break;
+      }
+      case codeNecKey3:
+      {
+        tvGuessChannelNumber(3);
+        break;
+      }
+      case codeNecKey4:
+      {
+        tvGuessChannelNumber(4);
+        break;
+      }
+      case codeNecKey5:
+      {
+        tvGuessChannelNumber(5);
+        break;
+      }
+      case codeNecKey6:
+      {
+        tvGuessChannelNumber(6);
+        break;
+      }
+      case codeNecKey7:
+      {
+        tvGuessChannelNumber(7);
+        break;
+      }
+      case codeNecKey8:
+      {
+        tvGuessChannelNumber(8);
+        break;
+      }
+      case codeNecKey9:
+      {
+        tvGuessChannelNumber(9);
+        break;
       }
     }
+    isKeyCombination(codeValueReceived);
     irrecv.enableIRIn();
   }
 }
