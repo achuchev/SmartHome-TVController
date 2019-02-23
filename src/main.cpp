@@ -4,6 +4,7 @@
 #include <IRsend.h>
 #include <IRrecv.h>
 #include <IRutils.h>
+
 #include <MqttClient.h>
 #include <FotaClient.h>
 #include <ESPWifiClient.h>
@@ -384,6 +385,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
 void setup()
 {
   wifiClient->init();
+
   mqttClient = new MqttClient(MQTT_SERVER,
                               MQTT_SERVER_PORT,
                               DEVICE_NAME,
@@ -862,9 +864,11 @@ void loop() {
   wifiClient->reconnectIfNeeded();
   RemotePrint::instance()->handle();
   fotaClient->loop();
+
   mqttClient->loop();
   tvSetVolumeIfNeeded();
   tvPublishStatus();
-  temperatureClient->loop();
+
+  // temperatureClient->loop();
   irLoop();
 }
