@@ -76,9 +76,8 @@ void tvPublishStatus(const char *messageId    = NULL,
     lastStatusMsgSentAt = now;
 
     const size_t bufferSize = JSON_ARRAY_SIZE(4) + 5 * JSON_OBJECT_SIZE(1);
-    DynamicJsonBuffer jsonBuffer(bufferSize);
-    JsonObject& root   = jsonBuffer.createObject();
-    JsonObject& status = root.createNestedObject("status");
+    DynamicJsonDocument root(bufferSize);
+    JsonObject status = root.createNestedObject("status");
 
     if (messageId != NULL) {
       root["messageId"] = messageId;
@@ -91,7 +90,7 @@ void tvPublishStatus(const char *messageId    = NULL,
 
     // convert to String
     String outString;
-    root.printTo(outString);
+    serializeJson(root, outString);
 
     // publish the message
     mqttClient->publish(MQTT_TOPIC_GET, outString);
@@ -113,7 +112,6 @@ void tvSendChannelNumber(unsigned int channelNumber) {
   }
 
   tempNum = channelNumber;
-
   unsigned int timeBetweenTransmission = 0;
 
   // Extracting the digits
@@ -241,35 +239,45 @@ void tvSetVolumeIfNeeded() {
 
 void tvIRSend(String payload) {
   PRINTLN("TV: Sending IR signal.");
+  PRINTLN_D("The payload is: ");
+  PRINTLN_D(payload)
 
-  // parse the JSON
+  // deserialize the payload to JSON
   const size_t bufferSize = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(8) + 130;
-  DynamicJsonBuffer jsonBuffer(bufferSize);
-  JsonObject& root   = jsonBuffer.parseObject(payload);
-  JsonObject& status = root.get<JsonObject&>("status");
+  DynamicJsonDocument  jsonDoc(bufferSize);
+  DeserializationError error = deserializeJson(jsonDoc, payload);
 
-  if (!status.success()) {
-    PRINTLN(
-      "AC: JSON with \"status\" key not received.");
-#ifdef DEBUG_ENABLED
-    root.prettyPrintTo(Serial);
-#endif // ifdef DEBUG_ENABLED
+  if (error) {
+    PRINT_E("Failed to deserialize the received payload. Error: ");
+    PRINTLN_E(error.c_str());
+    PRINTLN_E("The payload is: ");
+    PRINTLN_E(payload)
+    return;
+  }
+  JsonObject root   = jsonDoc.as<JsonObject>();
+  JsonObject status = root["status"];
+
+  if (status.isNull()) {
+    PRINTLN_E(
+      "AC: The received payload is valid JSON, but \"status\" key is not found.");
+    PRINTLN_E("The payload is: ");
+    PRINTLN_E(payload)
     return;
   }
 
-  const char *powerOnChar = status.get<const char *>("powerOn");
+  JsonVariant powerOnJV = status["powerOn"];
 
-  if (powerOnChar) {
-    bool powerOn = (strcasecmp(powerOnChar, "true") == 0);
+  if (!powerOnJV.isNull()) {
+    bool powerOn = powerOnJV.as<bool>();
 
     sendIRCode(codeSamsungSimplePower, false);
     tv->powerOn = powerOn;
   }
 
-  const char *skipChannels = status.get<const char *>("skipChannels");
+  JsonVariant skipChannelsJV = status["skipChannels"];
 
-  if (skipChannels) {
-    int skipChannelsInt = atoi(skipChannels);
+  if (!skipChannelsJV.isNull()) {
+    int skipChannelsInt = skipChannelsJV.as<int>();
     tv->channelNumber = tv->channelNumber + skipChannelsInt;
 
     if (skipChannelsInt > 0) {
@@ -280,23 +288,23 @@ void tvIRSend(String payload) {
     }
   }
 
-  const char *channelNumber = status.get<const char *>("changeChannel");
+  JsonVariant channelNumberJV = status["changeChannel"];
 
-  if (channelNumber) {
-    tv->channelNumber = atoi(channelNumber);
+  if (!channelNumberJV.isNull()) {
+    tv->channelNumber = channelNumberJV.as<int>();
     tvSendChannelNumber(tv->channelNumber);
   }
 
-  const char *setVolumeChar = status.get<const char *>("SetVolume");
+  JsonVariant setVolumeJV = status["SetVolume"];
 
-  if (setVolumeChar) {
-    tv->volumeDesired = atoi(setVolumeChar);
+  if (!setVolumeJV.isNull()) {
+    tv->volumeDesired = setVolumeJV.as<int>();
   }
 
-  const char *adjustVolumeChar = status.get<const char *>("AdjustVolume");
+  JsonVariant adjustVolumeJV = status["AdjustVolume"];
 
-  if (adjustVolumeChar) {
-    int adjustVolume = atoi(adjustVolumeChar);
+  if (!adjustVolumeJV.isNull()) {
+    int adjustVolume = adjustVolumeJV.as<int>();
 
     if (abs(adjustVolume) >= 10) {
       adjustVolume = adjustVolume / 10;
@@ -304,60 +312,59 @@ void tvIRSend(String payload) {
     tvAdjustTVVolume(adjustVolume);
   }
 
-  const char *setMuteChar = status.get<const char *>("SetMute");
+  JsonVariant setMuteJV = status["SetMute"];
 
-  if (setMuteChar) {
-    bool muted = (strcasecmp(setMuteChar, "true") == 0);
-
+  if (!setMuteJV.isNull()) {
     sendIRCode(codeSamsungSimpleRCMute, false);
-    tv->muted = muted;
+    tv->muted = setMuteJV.as<bool>();
   }
-  String playbackAction = status.get<String>("playbackAction");
+  JsonVariant playbackActionJV = status["playbackAction"];
 
-  if (playbackAction) {
-    if (strcasecmp(playbackAction.c_str(), "play") == 0) {
+  if (!playbackActionJV.isNull()) {
+    const char *playbackAction = playbackActionJV.as<const char *>();
+
+    if (strcasecmp(playbackAction, "play") == 0) {
       PRINTLN("PLAY");
       sendIRCode(codeNecPlayPause);
       sendIRCode(codeNecSpecialRepeatSequence);
       sendIRCode(codeSamsungSimplePlay, false);
-    } else if (strcasecmp(playbackAction.c_str(), "pause") == 0) {
+    } else if (strcasecmp(playbackAction, "pause") == 0) {
       PRINTLN("PAUSE");
       sendIRCode(codeNecPlayPause);
       sendIRCode(codeNecSpecialRepeatSequence);
       sendIRCode(codeSamsungSimplePause, false);
-    } else if (strcasecmp(playbackAction.c_str(), "stop") == 0) {
+    } else if (strcasecmp(playbackAction, "stop") == 0) {
       PRINTLN("STOP");
       sendIRCode(codeNecStop);
       sendIRCode(codeNecSpecialRepeatSequence);
       sendIRCode(codeSamsungSimpleStop, false);
-    } else if (strcasecmp(playbackAction.c_str(), "rewind") == 0) {
+    } else if (strcasecmp(playbackAction, "rewind") == 0) {
       PRINTLN("REWIND");
       sendIRCode(codeNecRewind);
       sendIRCode(codeNecSpecialRepeatSequence);
       sendIRCode(codeSamsungSimpleRewind, false);
-    } else if (strcasecmp(playbackAction.c_str(), "fastForward") == 0) {
+    } else if (strcasecmp(playbackAction, "fastForward") == 0) {
       PRINTLN("FAST FORWARD");
       sendIRCode(codeNecFastForward);
       sendIRCode(codeNecSpecialRepeatSequence);
       sendIRCode(codeSamsungSimpleFastForward, false);
-    } else if (strcasecmp(playbackAction.c_str(), "previous") == 0) {
+    } else if (strcasecmp(playbackAction, "previous") == 0) {
       PRINTLN("PREVIOUS");
       sendIRCode(codeNecPrevious);
       sendIRCode(codeNecSpecialRepeatSequence);
 
       // "Previous" action is not avaliable in Samsung
-    } else if (strcasecmp(playbackAction.c_str(), "next") == 0) {
+    } else if (strcasecmp(playbackAction, "next") == 0) {
       PRINTLN("NEXT");
       sendIRCode(codeNecNext);
       sendIRCode(codeNecSpecialRepeatSequence);
 
       // "Next" action is not avaliable in Samsung
     }
-    tv->playbackAction = playbackAction;
+    tv->playbackAction = String(playbackAction);
   }
 
-
-  const char *messageId = root.get<const char *>("messageId");
+  const char *messageId = root["messageId"];
   tvPublishStatus(messageId, true);
 }
 
