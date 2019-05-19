@@ -259,7 +259,7 @@ void tvIRSend(String payload) {
 
   if (status.isNull()) {
     PRINTLN_E(
-      "AC: The received payload is valid JSON, but \"status\" key is not found.");
+      "TV: The received payload is valid JSON, but \"status\" key is not found.");
     PRINTLN_E("The payload is: ");
     PRINTLN_E(payload)
     return;
@@ -272,6 +272,42 @@ void tvIRSend(String payload) {
 
     sendIRCode(codeSamsungSimplePower, false);
     tv->powerOn = powerOn;
+  }
+
+  JsonVariant pressButtonJV = status["pressButton"];
+
+  if (!pressButtonJV.isNull()) {
+    const char *pressButtonChar = pressButtonJV.as<const char *>();
+    PRINT("TV: Press button: ");
+
+    if (strcasecmp(pressButtonChar, "up") == 0) {
+      PRINTLN("Arrow Up");
+      sendIRCode(codeNecChannelUp);
+    } else if (strcasecmp(pressButtonChar, "down") == 0) {
+      PRINTLN("Arrow Down");
+      sendIRCode(codeNecChannelDown);
+    } else if (strcasecmp(pressButtonChar, "ok") == 0) {
+      PRINTLN("Ok");
+      sendIRCode(codeNecOk);
+    } else if (strcasecmp(pressButtonChar, "back") == 0) {
+      PRINTLN("Back");
+      sendIRCode(codeNecBack);
+    } else if (strcasecmp(pressButtonChar, "info") == 0) {
+      PRINTLN("Info");
+      sendIRCode(codeSamsungSimpleRCReturn, false);
+    } else if (strcasecmp(pressButtonChar, "left") == 0) {
+      PRINTLN("Left");
+      sendIRCode(codeSamsungSimpleVolumeDown, false);
+    } else if (strcasecmp(pressButtonChar, "right") == 0) {
+      PRINTLN("Right");
+      sendIRCode(codeSamsungSimpleVolumeUp, false);
+    } else if (strcasecmp(pressButtonChar, "mute") == 0) {
+      PRINTLN("Mute");
+      sendIRCode(codeSamsungSimpleRCMute, false);
+    } else {
+      PRINTLN("Unknown");
+      PRINTLN_E("TV: Unknown button pressed.");
+    }
   }
 
   JsonVariant skipChannelsJV = status["skipChannels"];
@@ -876,6 +912,6 @@ void loop() {
   tvSetVolumeIfNeeded();
   tvPublishStatus();
 
-  // temperatureClient->loop();
+  temperatureClient->loop();
   irLoop();
 }
